@@ -18,6 +18,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage }).single('file');
 
 // Define route for file upload
+let numFilesUploaded = 0;
 app.post('/upload', (req, res) => {
   upload(req, res, (err) => {
     if (err) {
@@ -33,6 +34,18 @@ app.post('/upload', (req, res) => {
     const base64Data = Buffer.from(fileData).toString('base64');
     // Send base64-encoded file data back to client
     res.send({ fileData: base64Data });
+
+    // Increment number of files uploaded and delete oldest file if necessary
+    numFilesUploaded++;
+    if (numFilesUploaded > 10) {
+      const files = fs.readdirSync('uploads/').map((fileName) => ({
+        name: fileName,
+        time: fs.statSync(`uploads/${fileName}`).ctime.getTime(),
+      }));
+      const oldestFile = files.sort((a, b) => a.time - b.time)[0].name;
+      fs.unlinkSync(`uploads/${oldestFile}`);
+      numFilesUploaded--;
+    }
   });
 });
 
